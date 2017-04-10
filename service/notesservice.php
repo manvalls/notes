@@ -117,7 +117,7 @@ class NotesService {
      * @throws NoteDoesNotExistException if note does not exist
      * @return \OCA\Notes\Db\Note the updated note
      */
-    public function update ($id, $content, $userId, $mtime=0) {
+    public function update ($id, $content, $userId, $category=null, $mtime=0) {
         $notesFolder = $this->getFolderForUser($userId);
         $file = $this->getFileById($notesFolder, $id);
         $folder = $file->getParent();
@@ -140,7 +140,14 @@ class NotesService {
 
         // generate filename if there were collisions
         $currentFilePath = $file->getPath();
-        $basePath = pathinfo($file->getPath(), PATHINFO_DIRNAME);
+        if($category===null) {
+            $basePath = pathinfo($file->getPath(), PATHINFO_DIRNAME);
+        } else {
+            $basePath = $notesFolder->getPath();
+            $categoryPath = $this->getCategoryPath($category);
+            if(!empty($categoryPath))
+                $basePath .= '/'.$categoryPath;
+        }
         $fileExtension = pathinfo($file->getName(), PATHINFO_EXTENSION);
         $newFilePath = $basePath . '/' . $this->generateFileName($folder, $title, $fileExtension, $id);
 
@@ -262,6 +269,19 @@ class NotesService {
         }
     }
 
+    private function getCategoryPath($category) {
+        $category = str_replace('\\', '/', $category);
+        $folders = explode('/', $category);
+        $cleanedFolders = [];
+        foreach($folders as $folder) {
+            $folder = trim($folder);
+            if(empty($folder) || substr($folder, 0, 1)=='.') {
+                continue;
+            }
+            $cleanedFolders[] = $folder;
+        }
+        return implode('/', $cleanedFolders);
+    }
 
 	/**
 	 * gather note files in given directory and all subdirectories
